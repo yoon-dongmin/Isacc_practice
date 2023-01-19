@@ -160,56 +160,13 @@ class PrimitiveAction(object):
         consts.orientation_constraints = [oc]
         move_group.set_path_constraints(consts)
 
-    def move_to(self, pose_goal, ori_constraint):
-        mp_info = dict()
-        planning_time = 0
-        execution_time = 0
-        success = False
-        traj_length = 0
+    def move_to(self, pose_goal):
+        self.move_group.set_pose_target(pose_goal)
+        plan = self.move_group.go(wait=True)
+        self.move_group.stop()
+        self.move_group.clear_pose_targets()
 
-        move_group = self.move_group
-
-        # visualize
-        self.br.sendTransform(pose_to_tf('world', 'target_pose', pose_goal))
-
-        # orientation constraint
-        if ori_constraint:
-            self.set_orientation_constraint(move_group)
-        else:
-            move_group.clear_path_constraints()
-        
-        # plan
-        start = time.time()
-        plan = move_group.plan(pose_goal)
-        print(plan,11111111111111111111111)
-        planning_time = time.time() - start
-        # traj_length = len(plan.joint_trajectory.points)
-
-        if self.self_play:
-            rospy.loginfo('move_to: {}'.format(traj_length))
-        else:
-            input('move_to: {}'.format(traj_length))
-
-        # retime trajectory 체크
-        # cur_state = move_group.get_current_state()
-        # plan = move_group.retime_trajectory(cur_state, plan, 2.0, 1.0)
-
-        # execute
-        start = time.time()
-        move_group.execute(plan, wait=True)
-        execution_time = time.time() - start
-        
-        if ori_constraint:
-            move_group.clear_path_constraints()
-
-        # info
-        mp_info['planning_time'] = planning_time
-        mp_info['execution_time'] = execution_time
-        mp_info['trajectory_length'] = traj_length
-        mp_info['target_pose'] = utils.pose_to_list(pose_goal)
-        mp_info['success'] = True if traj_length>0 else False
-
-        return plan, mp_info
+    
     
     def linear_motion(self, distance, avoid_collision=True, reference="world"):
         move_group = self.move_group
@@ -518,15 +475,79 @@ class PrimitiveAction(object):
             rospy.logerr(e)
             plan = []
             return plan
-
+    def grasp(self,grasp_size=0.04):
+        try:
+            robot = self.robot 
+            hand_group = self.hand_group 
+            eef_link = self.eef_link 
+            hand_group.set_joint_value_target([grasp_size, 0])
+            hand_group.go()
+        except Exception as e:
+            rospy.logerr(e)
 
 def main():
     pose_test = PrimitiveAction()
-    input()
-    # pose_test.add_object('[banana]',[0.3, 0, 0.47,0,0,90], "/ros_ws/src/object_sample/banana.stl",(1, 1, 1))
-    #pose_test.add_box('box',[0.3, 0, 0.48, 0, 0, 0], (0.06, 0.06, 0.05))
-    pose_test.move_to(list_to_pose([0.2, 0, 0.7, 0, 0, 0]), False)
-    # input("temp2") 
-    # pose_test.hold_object('[banana]', 0.02)
+    pose_goal = geometry_msgs.msg.Pose()
+
+    pose_goal.position.x = 0.3580361640436944
+    pose_goal.position.y = 0.05308103595170339
+    pose_goal.position.z = 0.40148404633838114
+
+    pose_goal.orientation.x = 0.923883641126151
+    pose_goal.orientation.y = -0.3826366288404408
+    pose_goal.orientation.z = -0.004816755330753461
+    pose_goal.orientation.w = 0.002242052004701504
+
+    #pick_up
+    pre_dist = 0.1
+    post_dist = 0.1
+    pre_dist_pose = [0, 0, -pre_dist, 0, 0, 0, 1]
+    pre_pose = utils.concatenate_to_pose(pose_goal,pre_dist_pose)
+    #print(pre_pose)
+    input() 
+    pose_test.move_to(pre_pose)
+    input() 
+    pose_test.linear_motion([0, 0, 0.1], True, "eef")
+    input() 
+    pose_test.grasp(grasp_size=0.02)
+    input() 
+    pose_test.linear_motion([0, 0, post_dist], True)
+
+    #place
+    # input() 
+    # a = pose_test.get_cur_pose()
+    # print(a)
+    pose_goal.position.x = 0.3418650509445885
+    pose_goal.position.y = 0.35937840330179416
+    pose_goal.position.z = 0.7769127410491126
+
+    pose_goal.orientation.x = 0.9244452018996354
+    pose_goal.orientation.y = -0.3809807945467783
+    pose_goal.orientation.z = -0.01320739798268974
+    pose_goal.orientation.w = 0.008959213680601113
+    input() 
+    pose_test.move_to(pose_goal)
+    input() 
+    pose_test.grasp()
+    #input() 
+
+    #Start pose
+    pose_goal.position.x = 0.30646574567259716
+    pose_goal.position.y = -2.366951358129629e-16
+    pose_goal.position.z = 0.5895587217732924
+
+    pose_goal.orientation.x = 0.9238761773316531
+    pose_goal.orientation.y = -0.3826366288404408
+    pose_goal.orientation.z = -0.0023558893585879656
+    pose_goal.orientation.w = 0.000975843858378463
+    input() 
+    pose_test.move_to(pose_goal)
+
+    #pose_test.linear_motion([0,0.5,0], True, reference="eef")
+    #input() 
+    #pose_test.circular_motion('Z', 'CW', 0.1, 0, 360, False)
+    #input() 
+    #pose_test.reciprocating_motion("Y",0.1,False)
+
 if __name__ == '__main__':
     main()

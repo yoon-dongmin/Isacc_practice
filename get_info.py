@@ -23,12 +23,13 @@ if __name__ == "__main__":
     eef_link = move_group.get_end_effector_link()
     group_names = robot.get_group_names()
     current_state = robot.get_current_state()
-
-    print ("============ Planning frame: %s" % planning_frame)
-    print ("============ End effector link: %s" % eef_link)
-    print ("============ Available Planning Groups:", robot.get_group_names())
-    print ("============ Printing robot state")
-    print (current_state)
+    cur_pose = move_group.get_current_pose().pose
+    #print ("============ Planning frame: %s" % planning_frame)
+    #print ("============ End effector link: %s" % eef_link)
+    #print ("============ Available Planning Groups:", robot.get_group_names())
+    #print ("============ Printing robot state")
+    #print (current_state)
     print ("="*20)
+    print ("current_pose",cur_pose)
 
     quit()
